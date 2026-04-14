@@ -333,15 +333,17 @@ def fetch_pokemon_api_entries(api_url: str) -> List[Dict[str, Any]]:
 
 def build_discord_message(channel_name: str, title: str, link: str, summary: str) -> Dict[str, Any]:
     description_lines = []
+
     if summary:
         description_lines.append(summary)
         description_lines.append("")
-    description_lines.append(f"記事はこちら: {link}")
+
+    description_lines.append(link)
 
     return {
         "embeds": [
             {
-                "title": f"📰 {title}",
+                "title": title,
                 "description": "\n".join(description_lines),
                 "footer": {"text": channel_name},
             }
