@@ -20,7 +20,6 @@ CONFIG_PATH = ROOT_DIR / "config" / "feeds.json"
 POSTED_URLS_PATH = ROOT_DIR / "data" / "posted_urls.json"
 
 MAX_STORED_URLS_PER_CHANNEL = 200
-MAX_POSTS_PER_RUN_PER_CHANNEL = 3
 REQUEST_TIMEOUT = 20
 
 USER_AGENT = (
@@ -430,7 +429,7 @@ def main() -> int:
         deduped = dedupe_entries(fetched_entries)
 
         new_entries = [entry for entry in deduped if entry["link"] not in seen_urls]
-        posts_to_send = new_entries[:MAX_POSTS_PER_RUN_PER_CHANNEL]
+        posts_to_send = new_entries
 
         print(f"[INFO] {channel_key}: fetched={len(deduped)} new={len(posts_to_send)}")
 
