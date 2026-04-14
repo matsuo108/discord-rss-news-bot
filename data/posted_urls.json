@@ -2,7 +2,10 @@
   "pokemon": [
     "https://www.pokemon.co.jp/info/cat_game/",
     "https://www.pokemon.co.jp/info/cat_app/",
-    "https://www.pokemon.co.jp/info/cat_card/"
+    "https://www.pokemon.co.jp/info/cat_card/",
+    "https://www.pokemon.co.jp/info/cat_tv_movie/",
+    "https://www.pokemon.co.jp/info/cat_pokecen/",
+    "https://www.pokemon.co.jp/info/cat_event/"
   ],
   "imas_million": []
 }
