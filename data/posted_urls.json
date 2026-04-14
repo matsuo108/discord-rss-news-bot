@@ -1,4 +1,24 @@
 {
-  "pokemon": [],
+  "pokemon_main": [
+    "https://pokemongo.com/ja/news/communityday-april-2026-tinkatink",
+    "https://www.pokemonunite.jp/ja/topics/news/20260410-1/",
+    "https://observatory-fukushima.jp/pokemon/",
+    "https://www.tokyo.grand.hyatt.co.jp/restaurants/recommended/pokemon-30th-grand-adventure/stay",
+    "https://www.pokemonchampions.jp/ja/",
+    "https://www.pokemon.co.jp/ex/pokemonhome/ja/",
+    "https://www.pokemonsleep.net/news/333831353535333734393439343030353832/",
+    "https://www.ikea.com/jp/ja/campaigns/20th-anniversary-pokemon-pub72465cf0/",
+    "https://www.pokemon-card.com/info/005439.html",
+    "https://abema.go.link/5w9IB",
+    "https://plza-news.pokemon-home.com/ja/page/28.html",
+    "https://www.pokemonsleep.net/news/333736303733343931383330353338323431/",
+    "https://pokemongo.com/news/communityday-march-2026-scorbunny",
+    "https://www.pokemonunite.jp/ja/topics/news/20260224-1/",
+    "https://www.pokemon.jp/special/nhkso-pokemon2026",
+    "https://www.pokemon.co.jp/ex/pjcs/2026/"
+  ],
+  "pokemon_goods": [
+    "https://www.pokemon.co.jp/info/2026/03/260313_p01.html"
+  ],
   "imas_million": []
 }
