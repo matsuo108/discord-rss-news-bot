@@ -261,7 +261,7 @@ def fetch_scrape_entries(channel_key: str, page_url: str) -> List[Dict[str, Any]
 
     # デバッグしやすいように先頭数件だけログ
     for i, entry in enumerate(entries[:20], start=1):
-    print(f"[DEBUG] {i:02d} | title={entry['title'][:100]} | link={entry['link']}")
+        print(f"[DEBUG] {i:02d} | title={entry['title'][:100]} | link={entry['link']}")
 
     return entries
 
