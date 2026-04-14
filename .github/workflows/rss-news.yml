@@ -27,6 +27,7 @@ jobs:
       - name: Run bot
         env:
           DISCORD_WEBHOOK_POKEMON: ${{ secrets.DISCORD_WEBHOOK_POKEMON }}
+          DISCORD_WEBHOOK_POKEMON_GOODS: ${{ secrets.DISCORD_WEBHOOK_POKEMON_GOODS }}
           DISCORD_WEBHOOK_IMAS_MILLION: ${{ secrets.DISCORD_WEBHOOK_IMAS_MILLION }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python src/main.py
