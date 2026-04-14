@@ -269,7 +269,11 @@ def fetch_scrape_entries(channel_key: str, page_url: str) -> List[Dict[str, Any]
     return entries
 
 
-def fetch_pokemon_api_entries(api_url: str) -> List[Dict[str, Any]]:
+def fetch_pokemon_api_entries(
+    api_url: str,
+    allowed_terms: List[str] | None = None,
+    use_term_emoji: bool = False,
+) -> List[Dict[str, Any]]:
     response = requests.get(
         api_url,
         headers={"User-Agent": USER_AGENT},
@@ -281,6 +285,15 @@ def fetch_pokemon_api_entries(api_url: str) -> List[Dict[str, Any]]:
     results = data.get("results", [])
     entries: List[Dict[str, Any]] = []
 
+    allowed_terms_set = set(allowed_terms or [])
+
+    term_emoji_map = {
+        "app": "📱",
+        "event": "🎉",
+        "game": "🎮",
+        "campaign": "🎁",
+    }
+
     for item in results:
         title = str(item.get("title", "")).strip()
         link = str(item.get("full_uniq") or item.get("uniq") or "").strip()
@@ -289,6 +302,7 @@ def fetch_pokemon_api_entries(api_url: str) -> List[Dict[str, Any]]:
         start_date = str(item.get("start_date", "")).strip()
         sub_text = str(item.get("txt_1", "")).strip()
         item_type = str(item.get("type", "")).strip()
+        term = str(item.get("term", "")).strip()
         is_new = int(item.get("new", 0) or 0)
 
         if not title or not link:
@@ -297,16 +311,19 @@ def fetch_pokemon_api_entries(api_url: str) -> List[Dict[str, Any]]:
         if link.startswith("/"):
             link = urljoin("https://www.pokemon.co.jp", link)
 
-        # カテゴリなど不要URLを除外
         if "/info/cat_" in link:
             continue
+
+        if allowed_terms_set and term not in allowed_terms_set:
+            continue
+
+        if use_term_emoji and term in term_emoji_map:
+            title = f"{term_emoji_map[term]} {title}"
 
         if start_date:
             summary_parts.append(start_date)
         if sub_text:
             summary_parts.append(sub_text)
-        if item_type:
-            summary_parts.append(f"[{item_type}]")
         if is_new:
             summary_parts.append("NEW")
 
@@ -344,7 +361,6 @@ def build_discord_message(channel_name: str, title: str, link: str, summary: str
             {
                 "title": title,
                 "description": "\n".join(description_lines),
-                "footer": {"text": channel_name},
             }
         ]
     }
@@ -412,11 +428,18 @@ def main() -> int:
 
             elif source_type == "pokemon_api":
                 api_url = channel_config.get("url", "").strip()
+                allowed_terms = channel_config.get("allowed_terms", [])
+                use_term_emoji = channel_config.get("use_term_emoji", False)
+            
                 if not api_url:
                     print(f"[WARN] Skip {channel_key}: pokemon_api url is empty")
                     continue
             
-                fetched_entries = fetch_pokemon_api_entries(api_url)
+                fetched_entries = fetch_pokemon_api_entries(
+                    api_url=api_url,
+                    allowed_terms=allowed_terms,
+                    use_term_emoji=use_term_emoji,
+                )
                 
             else:
                 print(f"[WARN] Skip {channel_key}: unknown type '{source_type}'")
