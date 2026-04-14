@@ -3,9 +3,11 @@ import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Set
+from urllib.parse import urljoin
 
 import feedparser
 import requests
+from bs4 import BeautifulSoup
 
 try:
     from openai import OpenAI
@@ -20,6 +22,12 @@ POSTED_URLS_PATH = ROOT_DIR / "data" / "posted_urls.json"
 MAX_STORED_URLS_PER_CHANNEL = 200
 MAX_POSTS_PER_RUN_PER_CHANNEL = 3
 REQUEST_TIMEOUT = 20
+
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/123.0.0.0 Safari/537.36"
+)
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -52,7 +60,7 @@ def summarize_text(client, title: str, link: str, summary_hint: str = "") -> str
 - 未確認情報っぽいことは断定しない
 - 40〜100文字程度を目安
 - 1行で読みやすくまとめる
-- 記事タイトルから推測しすぎない
+- 記事タイトルや補足から推測しすぎない
 
 タイトル: {title}
 URL: {link}
@@ -71,13 +79,13 @@ URL: {link}
         return ""
 
 
-def fetch_feed_entries(feed_url: str) -> List[Dict[str, str]]:
+def fetch_feed_entries(feed_url: str) -> List[Dict[str, Any]]:
     parsed = feedparser.parse(feed_url)
 
     if getattr(parsed, "bozo", 0):
         print(f"[WARN] Feed parse warning: {feed_url}")
 
-    entries: List[Dict[str, str]] = []
+    entries: List[Dict[str, Any]] = []
     for entry in parsed.entries:
         link = entry.get("link", "").strip()
         title = entry.get("title", "").strip()
@@ -104,7 +112,119 @@ def fetch_feed_entries(feed_url: str) -> List[Dict[str, str]]:
             }
         )
 
-    entries.sort(key=lambda x: x["published_ts"], reverse=False)
+    entries.sort(key=lambda x: x["published_ts"])
+    return entries
+
+
+def fetch_html(url: str) -> str:
+    response = requests.get(
+        url,
+        headers={"User-Agent": USER_AGENT},
+        timeout=REQUEST_TIMEOUT,
+    )
+    response.raise_for_status()
+    return response.text
+
+
+def try_extract_entries_with_selectors(
+    html: str,
+    base_url: str,
+    selectors: List[str],
+) -> List[Dict[str, Any]]:
+    soup = BeautifulSoup(html, "html.parser")
+    entries: List[Dict[str, Any]] = []
+
+    for selector in selectors:
+        nodes = soup.select(selector)
+        print(f"[DEBUG] selector='{selector}' -> {len(nodes)} nodes")
+
+        for node in nodes:
+            href = node.get("href", "").strip()
+            title = node.get_text(" ", strip=True)
+
+            if not href or not title:
+                continue
+
+            full_url = urljoin(base_url, href)
+
+            # 一覧ページ自身やページ内リンクを雑に除外
+            if full_url == base_url or "#" in href:
+                continue
+
+            entries.append(
+                {
+                    "title": title,
+                    "link": full_url,
+                    "summary": "",
+                    "published_ts": 0,
+                }
+            )
+
+        # 1つのセレクタで十分取れたらそれを採用
+        if len(entries) >= 3:
+            break
+
+    return dedupe_entries(entries)
+
+
+def dedupe_entries(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    deduped: List[Dict[str, Any]] = []
+    seen_links = set()
+
+    for entry in entries:
+        link = entry.get("link", "")
+        title = entry.get("title", "")
+        if not link or not title or link in seen_links:
+            continue
+        seen_links.add(link)
+        deduped.append(entry)
+
+    return deduped
+
+
+def fetch_scrape_entries(channel_key: str, page_url: str) -> List[Dict[str, Any]]:
+    html = fetch_html(page_url)
+    print(f"[DEBUG] fetched html: {page_url} ({len(html)} chars)")
+
+    # サイトごとの候補セレクタ
+    selector_map = {
+        "pokemon": [
+            "main a[href*='/info/']",
+            "article a[href*='/info/']",
+            "section a[href*='/info/']",
+            "a[href*='/info/'][href$='/']",
+            "a[href*='/info/']",
+        ],
+        "imas_million": [
+            "main a[href*='/news/']",
+            "article a[href*='/news/']",
+            "section a[href*='/news/']",
+            "a[href*='/news/']",
+        ],
+    }
+
+    selectors = selector_map.get(
+        channel_key,
+        [
+            "main a",
+            "article a",
+            "section a",
+            "a",
+        ],
+    )
+
+    entries = try_extract_entries_with_selectors(
+        html=html,
+        base_url=page_url,
+        selectors=selectors,
+    )
+
+    print(f"[DEBUG] scrape result for {channel_key}: {len(entries)} entries")
+
+    # デバッグしやすいように先頭数件だけログ
+    for entry in entries[:5]:
+        print(f"[DEBUG] title={entry['title'][:80]} / link={entry['link']}")
+
     return entries
 
 
@@ -157,7 +277,7 @@ def main() -> int:
     for channel_key, channel_config in config.items():
         channel_name = channel_config.get("name", channel_key)
         webhook_env = channel_config.get("webhook_env", "")
-        feed_urls = channel_config.get("feeds", [])
+        source_type = channel_config.get("type", "rss")
 
         webhook_url = os.getenv(webhook_env)
         if not webhook_url:
@@ -165,31 +285,40 @@ def main() -> int:
             continue
 
         seen_urls: Set[str] = set(posted_urls.get(channel_key, []))
-        new_entries: List[Dict[str, str]] = []
+        fetched_entries: List[Dict[str, Any]] = []
 
-        for feed_url in feed_urls:
-            try:
-                entries = fetch_feed_entries(feed_url)
-            except Exception as e:
-                print(f"[WARN] Failed to fetch feed {feed_url}: {e}")
+        try:
+            if source_type == "rss":
+                feed_urls = channel_config.get("feeds", [])
+                for feed_url in feed_urls:
+                    entries = fetch_feed_entries(feed_url)
+                    print(f"[DEBUG] rss {feed_url}: {len(entries)} entries")
+                    fetched_entries.extend(entries)
+
+            elif source_type == "scrape":
+                page_url = channel_config.get("url", "").strip()
+                if not page_url:
+                    print(f"[WARN] Skip {channel_key}: scrape url is empty")
+                    continue
+
+                fetched_entries = fetch_scrape_entries(
+                    channel_key=channel_key,
+                    page_url=page_url,
+                )
+            else:
+                print(f"[WARN] Skip {channel_key}: unknown type '{source_type}'")
                 continue
 
-            for entry in entries:
-                if entry["link"] not in seen_urls:
-                    new_entries.append(entry)
+        except Exception as e:
+            print(f"[ERROR] Failed to fetch entries for {channel_key}: {e}")
+            continue
 
-        deduped = []
-        added_links = set()
-        for entry in new_entries:
-            if entry["link"] in added_links:
-                continue
-            added_links.add(entry["link"])
-            deduped.append(entry)
+        deduped = dedupe_entries(fetched_entries)
 
-        deduped.sort(key=lambda x: x["published_ts"])
-        posts_to_send = deduped[:MAX_POSTS_PER_RUN_PER_CHANNEL]
+        new_entries = [entry for entry in deduped if entry["link"] not in seen_urls]
+        posts_to_send = new_entries[:MAX_POSTS_PER_RUN_PER_CHANNEL]
 
-        print(f"[INFO] {channel_key}: {len(posts_to_send)} new posts")
+        print(f"[INFO] {channel_key}: fetched={len(deduped)} new={len(posts_to_send)}")
 
         for entry in posts_to_send:
             summary = summarize_text(
