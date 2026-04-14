@@ -1,0 +1,16 @@
+{
+  "pokemon": {
+    "name": "ポケモン情報",
+    "webhook_env": "DISCORD_WEBHOOK_POKEMON",
+    "feeds": [
+      "https://www.pokemon.co.jp/info/rss.xml"
+    ]
+  },
+  "imas_million": {
+    "name": "アイマス・ミリオン情報",
+    "webhook_env": "DISCORD_WEBHOOK_IMAS_MILLION",
+    "feeds": [
+      "https://idolmaster-official.jp/rss.xml"
+    ]
+  }
+}
