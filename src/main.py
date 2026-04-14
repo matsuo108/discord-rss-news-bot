@@ -157,6 +157,10 @@ def is_noise_link(title: str, full_url: str) -> bool:
     if full_url.rstrip("/") in {url.rstrip("/") for url in noise_urls}:
         return True
 
+    # ポケモンのカテゴリページを除外
+    if "pokemon.co.jp/info/cat_" in full_url:
+        return True
+
     return False
 
 
@@ -226,12 +230,12 @@ def fetch_scrape_entries(channel_key: str, page_url: str) -> List[Dict[str, Any]
 
     # サイトごとの候補セレクタ
     selector_map = {
-        "pokemon": [
+        ""pokemon": [
+            "main article a",
+            "main li a",
+            "main .news a",
+            "main .archive a",
             "main a[href*='/info/']",
-            "article a[href*='/info/']",
-            "section a[href*='/info/']",
-            "a[href*='/info/'][href$='/']",
-            "a[href*='/info/']",
         ],
         "imas_million": [
             "main a[href*='/news/']",
