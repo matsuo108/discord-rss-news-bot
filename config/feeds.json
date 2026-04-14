@@ -1,6 +1,6 @@
 {
   "pokemon": {
-    "name": "ポケモン情報",
+    "name": "ポケモン公式ニュース",
     "webhook_env": "DISCORD_WEBHOOK_POKEMON",
     "type": "pokemon_api",
     "url": "https://www.pokemon.co.jp/api/info/index/?limit=20&page=1"
