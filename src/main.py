@@ -173,30 +173,30 @@ def try_extract_entries_with_selectors(
         print(f"[DEBUG] selector='{selector}' -> {len(nodes)} nodes")
 
         for node in nodes:
-        href = node.get("href", "").strip()
-        title = node.get_text(" ", strip=True)
-    
-        if not href or not title:
-            continue
-    
-        full_url = urljoin(base_url, href)
-    
-        # ページ内リンク・一覧ページそのもの除外
-        if full_url == base_url or "#" in href:
-            continue
-    
-        # カテゴリやノイズっぽいリンクを除外
-        if is_noise_link(title, full_url):
-            continue
-    
-        entries.append(
-            {
-                "title": title,
-                "link": full_url,
-                "summary": "",
-                "published_ts": 0,
-            }
-        )
+            href = node.get("href", "").strip()
+            title = node.get_text(" ", strip=True)
+        
+            if not href or not title:
+                continue
+        
+            full_url = urljoin(base_url, href)
+        
+            # ページ内リンク・一覧ページそのもの除外
+            if full_url == base_url or "#" in href:
+                continue
+        
+            # カテゴリやノイズっぽいリンクを除外
+            if is_noise_link(title, full_url):
+                continue
+        
+            entries.append(
+                {
+                    "title": title,
+                    "link": full_url,
+                    "summary": "",
+                    "published_ts": 0,
+                }
+            )
         
         # 1つのセレクタで十分取れたらそれを採用
         if len(entries) >= 3:
