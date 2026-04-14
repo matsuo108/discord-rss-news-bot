@@ -1,9 +1,19 @@
 {
-  "pokemon": {
+  "pokemon_main": {
     "name": "ポケモン公式ニュース",
     "webhook_env": "DISCORD_WEBHOOK_POKEMON",
     "type": "pokemon_api",
-    "url": "https://www.pokemon.co.jp/api/info/index/?limit=20&page=1"
+    "url": "https://www.pokemon.co.jp/api/info/index/?limit=20&page=1",
+    "allowed_terms": ["app", "event", "game", "campaign"],
+    "use_term_emoji": true
+  },
+  "pokemon_goods": {
+    "name": "ポケモングッズ情報",
+    "webhook_env": "DISCORD_WEBHOOK_POKEMON_GOODS",
+    "type": "pokemon_api",
+    "url": "https://www.pokemon.co.jp/api/info/index/?limit=20&page=1",
+    "allowed_terms": ["pokecen"],
+    "use_term_emoji": false
   },
   "imas_million": {
     "name": "アイマス・ミリオン情報",
