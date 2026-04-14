@@ -1,0 +1,40 @@
+name: RSS News Bot
+
+on:
+  schedule:
+    - cron: "0 21,3,9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-rss-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run bot
+        env:
+          DISCORD_WEBHOOK_POKEMON: ${{ secrets.DISCORD_WEBHOOK_POKEMON }}
+          DISCORD_WEBHOOK_IMAS_MILLION: ${{ secrets.DISCORD_WEBHOOK_IMAS_MILLION }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python src/main.py
+
+      - name: Commit posted URLs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/posted_urls.json
+          git diff --cached --quiet || git commit -m "Update posted URLs"
+          git push
