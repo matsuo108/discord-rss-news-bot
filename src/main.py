@@ -230,7 +230,7 @@ def fetch_scrape_entries(channel_key: str, page_url: str) -> List[Dict[str, Any]
 
     # サイトごとの候補セレクタ
     selector_map = {
-        ""pokemon": [
+        "pokemon": [
             "main article a",
             "main li a",
             "main .news a",
