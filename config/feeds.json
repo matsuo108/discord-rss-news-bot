@@ -2,9 +2,8 @@
   "pokemon": {
     "name": "ポケモン情報",
     "webhook_env": "DISCORD_WEBHOOK_POKEMON",
-    "feeds": [
-      "https://www.pokemon.co.jp/info/rss.xml"
-    ]
+    "type": "scrape",
+    "url": "https://www.pokemon.co.jp/info/"
   },
   "imas_million": {
     "name": "アイマス・ミリオン情報",
