@@ -270,6 +270,67 @@ def fetch_scrape_entries(channel_key: str, page_url: str) -> List[Dict[str, Any]
     return entries
 
 
+def fetch_pokemon_api_entries(api_url: str) -> List[Dict[str, Any]]:
+    response = requests.get(
+        api_url,
+        headers={"User-Agent": USER_AGENT},
+        timeout=REQUEST_TIMEOUT,
+    )
+    response.raise_for_status()
+    data = response.json()
+
+    results = data.get("results", [])
+    entries: List[Dict[str, Any]] = []
+
+    for item in results:
+        title = str(item.get("title", "")).strip()
+        link = str(item.get("full_uniq") or item.get("uniq") or "").strip()
+        summary_parts = []
+
+        start_date = str(item.get("start_date", "")).strip()
+        sub_text = str(item.get("txt_1", "")).strip()
+        item_type = str(item.get("type", "")).strip()
+        is_new = int(item.get("new", 0) or 0)
+
+        if not title or not link:
+            continue
+
+        if link.startswith("/"):
+            link = urljoin("https://www.pokemon.co.jp", link)
+
+        # カテゴリなど不要URLを除外
+        if "/info/cat_" in link:
+            continue
+
+        if start_date:
+            summary_parts.append(start_date)
+        if sub_text:
+            summary_parts.append(sub_text)
+        if item_type:
+            summary_parts.append(f"[{item_type}]")
+        if is_new:
+            summary_parts.append("NEW")
+
+        entries.append(
+            {
+                "title": title,
+                "link": link,
+                "summary": " / ".join(summary_parts),
+                "published_ts": 0,
+            }
+        )
+
+    print(f"[DEBUG] pokemon_api result: {len(entries)} entries")
+    for i, entry in enumerate(entries[:20], start=1):
+        print(
+            f"[DEBUG] {i:02d} | "
+            f"title={entry['title'][:100]} | "
+            f"link={entry['link']}"
+        )
+
+    return dedupe_entries(entries)
+
+
 def build_discord_message(channel_name: str, title: str, link: str, summary: str) -> Dict[str, Any]:
     description_lines = []
     if summary:
@@ -347,6 +408,15 @@ def main() -> int:
                     channel_key=channel_key,
                     page_url=page_url,
                 )
+
+            elif source_type == "pokemon_api":
+                api_url = channel_config.get("url", "").strip()
+                if not api_url:
+                    print(f"[WARN] Skip {channel_key}: pokemon_api url is empty")
+                    continue
+            
+                fetched_entries = fetch_pokemon_api_entries(api_url)
+                
             else:
                 print(f"[WARN] Skip {channel_key}: unknown type '{source_type}'")
                 continue
