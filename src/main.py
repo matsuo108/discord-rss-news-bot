@@ -126,6 +126,40 @@ def fetch_html(url: str) -> str:
     return response.text
 
 
+def is_noise_link(title: str, full_url: str) -> bool:
+    """
+    ニュース記事ではないリンク（カテゴリ、一覧ページなど）を除外する
+    """
+    noise_keywords = [
+        "ニュース",
+        "一覧",
+        "カテゴリー",
+        "カテゴリ",
+        "すべて",
+        "全て",
+        "TOP",
+        "トップ",
+        "戻る",
+    ]
+
+    # タイトルがノイズっぽい
+    if any(keyword in title for keyword in noise_keywords):
+        return True
+
+    # 一覧ページそのもの
+    noise_urls = {
+        "https://www.pokemon.co.jp/info",
+        "https://www.pokemon.co.jp/info/",
+        "https://idolmaster-official.jp/news",
+        "https://idolmaster-official.jp/news/",
+    }
+
+    if full_url.rstrip("/") in {url.rstrip("/") for url in noise_urls}:
+        return True
+
+    return False
+
+
 def try_extract_entries_with_selectors(
     html: str,
     base_url: str,
@@ -139,27 +173,31 @@ def try_extract_entries_with_selectors(
         print(f"[DEBUG] selector='{selector}' -> {len(nodes)} nodes")
 
         for node in nodes:
-            href = node.get("href", "").strip()
-            title = node.get_text(" ", strip=True)
-
-            if not href or not title:
-                continue
-
-            full_url = urljoin(base_url, href)
-
-            # 一覧ページ自身やページ内リンクを雑に除外
-            if full_url == base_url or "#" in href:
-                continue
-
-            entries.append(
-                {
-                    "title": title,
-                    "link": full_url,
-                    "summary": "",
-                    "published_ts": 0,
-                }
-            )
-
+        href = node.get("href", "").strip()
+        title = node.get_text(" ", strip=True)
+    
+        if not href or not title:
+            continue
+    
+        full_url = urljoin(base_url, href)
+    
+        # ページ内リンク・一覧ページそのもの除外
+        if full_url == base_url or "#" in href:
+            continue
+    
+        # カテゴリやノイズっぽいリンクを除外
+        if is_noise_link(title, full_url):
+            continue
+    
+        entries.append(
+            {
+                "title": title,
+                "link": full_url,
+                "summary": "",
+                "published_ts": 0,
+            }
+        )
+        
         # 1つのセレクタで十分取れたらそれを採用
         if len(entries) >= 3:
             break
@@ -222,8 +260,8 @@ def fetch_scrape_entries(channel_key: str, page_url: str) -> List[Dict[str, Any]
     print(f"[DEBUG] scrape result for {channel_key}: {len(entries)} entries")
 
     # デバッグしやすいように先頭数件だけログ
-    for entry in entries[:5]:
-        print(f"[DEBUG] title={entry['title'][:80]} / link={entry['link']}")
+    for i, entry in enumerate(entries[:20], start=1):
+    print(f"[DEBUG] {i:02d} | title={entry['title'][:100]} | link={entry['link']}")
 
     return entries
 
