@@ -8,8 +8,7 @@
   "imas_million": {
     "name": "アイマス・ミリオン情報",
     "webhook_env": "DISCORD_WEBHOOK_IMAS_MILLION",
-    "feeds": [
-      "https://idolmaster-official.jp/rss.xml"
-    ]
+    "type": "scrape",
+    "url": "https://idolmaster-official.jp/news"
   }
 }
